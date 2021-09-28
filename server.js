@@ -20,6 +20,6 @@ app.use('/api',apiRouter);
 
 
 const port = process.env.PORT;
-app.listen(()=>{
+app.listen(port,()=>{
     console.log(`Server started on port ${port}`);
 })
