@@ -19,9 +19,9 @@ const userSchema = new mongoose.Schema({
         required:[true,"Please provide a password"],
         type:String
     },
-    followers:[String],
-    following:[String],
-    posts:[String],
+    followers:[{id:String}],
+    following:[{id:String}],
+    posts:[{id:String}],
     joinedAt:Date,
     profileImage:String
 })
