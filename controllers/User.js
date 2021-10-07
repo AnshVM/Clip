@@ -1,11 +1,11 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken')
-
+const ObjectId = require('mongoose').Types.ObjectId;
 //helper func for login
 const checkPasswordAndSendToken = async (password, user, res) => {
     bcrypt.compare(password, user.password)
-        .then(async(result) => {
+        .then(async (result) => {
             if (result === false) {
                 return res.status(400).json("Incorrect username,email or password");
             }
@@ -31,7 +31,7 @@ exports.signup = async (req, res) => {
 
             user.save()
                 .then((user) => {
-                    return res.status(201).json("Success");
+                    return res.status(201).json(user._id);
                 })
                 .catch((err) => {
                     if (err.errors.username)
@@ -50,57 +50,84 @@ exports.login = async (req, res) => {
     User.findOne({ username: first })
         .then(async (user) => {
             if (!user) throw "UsernameNotFound"
-            else checkPasswordAndSendToken(password,user,res)
+            else checkPasswordAndSendToken(password, user, res)
         })
         .catch((err) => {
             if (err === "UsernameNotFound") {
                 User.findOne({ email: first })
                     .then(async (user) => {
-                        console.log("User: "+JSON.stringify(user))
+                        console.log("User: " + JSON.stringify(user))
                         if (!user) throw "EmailNotFound"
                         else checkPasswordAndSendToken(password, user, res);
                     })
-                    .catch((err2)=>{
-                        if(err2==="EmailNotFound")
+                    .catch((err2) => {
+                        if (err2 === "EmailNotFound")
                             return res.status(400).json("Username or email address incorrect")
                     })
             }
         })
 }
 
-exports.getCurrentUser = async(req,res)=>{
+exports.getCurrentUser = async (req, res) => {
     User.findById(req.userId)
-    .then((user)=>{
-        user.password = undefined;
-        return res.status(200).json(user);
-    })
-    .catch((err)=>console.log(err))
+        .then((user) => {
+            user.password = undefined;
+            return res.status(200).json(user);
+        })
+        .catch((err) => console.log(err))
 }
 
-exports.getUserById = async(req,res)=>{
+exports.getUserById = async (req, res) => {
     User.findById(req.params.id)
-    .then((user)=>{
-        user.password = undefined;
-        return res.status(200).json(user);
-    })
-    .catch((err)=>console.log(err))
+        .then((user) => {
+            user.password = undefined;
+            return res.status(200).json(user);
+        })
+        .catch((err) => console.log(err))
 }
 
-exports.follow = async(req,res)=>{
+exports.follow = async (req, res) => {
     const user = await User.findById(req.userId);
-    if(!user) return res.status(404).json("User not found")
+    if (!user) return res.status(404).json("User not found")
 
     const user2 = await User.findById(req.params.id);
-    if(!user2) return res.status(404).json("User to be followed not found")
+    if (!user2) return res.status(404).json("User to be followed not found")
 
-    if(user.following.includes(user2._id)) 
+    if (user.following.includes(user2._id))
         return res.status(400).json("You already follow this user")
 
     user.following.push(user2._id);
     user2.followers.push(user._id);
-    
+
     user.save();
     user2.save();
 
-    res.status(201).json({user,user2})
+    res.status(201).json({ user, user2 })
+}
+
+exports.unfollow = async (req, res) => {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json("User not found")
+    const user2 = await User.findById(req.params.id);
+    if (!user2) return res.status(404).json("User to be unfollowed not found")
+
+    let follows = false;
+    for (let i = 0; i < user.following.length; i++) {
+        if (user.following[i]._id.equals(user2._id)) {
+            follows = true;
+            break;
+        }
+    }
+    if (follows === false)
+        return res.status(400).json("You don't follow this user")
+
+    console.log('here');
+    user.following = user.following.filter(item => item._id.equals(user._id));
+    
+    user2.followers = user2.followers.filter(item => item._id.equals(user2._id));
+
+    user.save();
+    user2.save();
+
+    res.status(201).json({ user, user2 })
 }
