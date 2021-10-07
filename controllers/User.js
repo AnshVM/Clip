@@ -93,8 +93,14 @@ exports.follow = async(req,res)=>{
     const user2 = await User.findById(req.params.id);
     if(!user2) return res.status(404).json("User to be followed not found")
 
+    if(user.following.includes(user2._id)) 
+        return res.status(400).json("You already follow this user")
+
     user.following.push(user2._id);
     user2.followers.push(user._id);
+    
+    user.save();
+    user2.save();
 
-    res.status(201).json("Success")
+    res.status(201).json({user,user2})
 }
